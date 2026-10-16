@@ -16,9 +16,11 @@ from homeassistant.util import dt as dt_util
 
 from .const import (
     CONF_REMINDER_DAYS,
+    DEFAULT_LANGUAGE,
     DEFAULT_REMINDER_DAYS,
     DOMAIN,
     EVENT_REMINDER,
+    NOTIFICATION_TEXTS,
     SIGNAL_UPDATE,
     STORAGE_VERSION,
 )
@@ -145,23 +147,26 @@ class ManualWaterMeterCoordinator:
         return f"{DOMAIN}_{self.entry.entry_id}_reminder"
 
     @callback
+    def _texts(self) -> dict[str, str]:
+        """Return the notification texts for Home Assistant's language."""
+        language = (self.hass.config.language or DEFAULT_LANGUAGE).split("-")[0]
+        return NOTIFICATION_TEXTS.get(language, NOTIFICATION_TEXTS[DEFAULT_LANGUAGE])
+
+    @callback
     def _fire_reminder(self) -> None:
         """Notify the user and fire an event that automations can use."""
         days = self.days_since_update
+        texts = self._texts()
         if days is None:
-            message = (
-                f"No reading has ever been recorded for '{self.entry.title}'. "
-                "Please enter your current water meter value."
-            )
+            message = texts["message_never"].format(name=self.entry.title)
         else:
-            message = (
-                f"It has been {days:.0f} day(s) since the last reading of "
-                f"'{self.entry.title}'. Please update your water meter value."
+            message = texts["message_overdue"].format(
+                name=self.entry.title, days=f"{days:.0f}"
             )
         persistent_notification.async_create(
             self.hass,
             message,
-            title=f"Water meter reading due — {self.entry.title}",
+            title=texts["title"].format(name=self.entry.title),
             notification_id=self._notification_id,
         )
         self.hass.bus.async_fire(
