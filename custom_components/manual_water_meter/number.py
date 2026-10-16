@@ -2,19 +2,25 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from homeassistant.components.number import NumberEntity, NumberMode
 from homeassistant.const import UnitOfVolume
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import ManualWaterMeterConfigEntry
 from .const import METER_MAX, METER_MIN, METER_STEP
-from .coordinator import ManualWaterMeterCoordinator
+
+if TYPE_CHECKING:
+    from homeassistant.core import HomeAssistant
+    from homeassistant.helpers.entity_platform import AddEntitiesCallback
+
+    from . import ManualWaterMeterConfigEntry
+    from .coordinator import ManualWaterMeterCoordinator
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    hass: HomeAssistant,  # noqa: ARG001
     entry: ManualWaterMeterConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:

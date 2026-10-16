@@ -2,20 +2,25 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import ManualWaterMeterConfigEntry
-from .coordinator import ManualWaterMeterCoordinator
+if TYPE_CHECKING:
+    from homeassistant.core import HomeAssistant
+    from homeassistant.helpers.entity_platform import AddEntitiesCallback
+
+    from . import ManualWaterMeterConfigEntry
+    from .coordinator import ManualWaterMeterCoordinator
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    hass: HomeAssistant,  # noqa: ARG001
     entry: ManualWaterMeterConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
@@ -51,6 +56,7 @@ class ReminderBinarySensor(BinarySensorEntity):
         }
 
     async def async_added_to_hass(self) -> None:
+        """Subscribe to coordinator updates."""
         self.async_on_remove(
             async_dispatcher_connect(
                 self.hass, self._coordinator.signal, self._handle_update

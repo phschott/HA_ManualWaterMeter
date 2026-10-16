@@ -2,22 +2,27 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorStateClass,
 )
 from homeassistant.const import UnitOfTime, UnitOfVolume
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import ManualWaterMeterConfigEntry
-from .coordinator import ManualWaterMeterCoordinator
+if TYPE_CHECKING:
+    from homeassistant.core import HomeAssistant
+    from homeassistant.helpers.entity_platform import AddEntitiesCallback
+
+    from . import ManualWaterMeterConfigEntry
+    from .coordinator import ManualWaterMeterCoordinator
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    hass: HomeAssistant,  # noqa: ARG001
     entry: ManualWaterMeterConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
@@ -37,10 +42,12 @@ class _BaseSensor(SensorEntity):
     _attr_has_entity_name = True
 
     def __init__(self, coordinator: ManualWaterMeterCoordinator) -> None:
+        """Initialize the sensor."""
         self._coordinator = coordinator
         self._attr_device_info = coordinator.device_info
 
     async def async_added_to_hass(self) -> None:
+        """Subscribe to coordinator updates."""
         self.async_on_remove(
             async_dispatcher_connect(
                 self.hass, self._coordinator.signal, self._handle_update
@@ -63,11 +70,13 @@ class WaterConsumptionSensor(_BaseSensor):
     _attr_icon = "mdi:water"
 
     def __init__(self, coordinator: ManualWaterMeterCoordinator) -> None:
+        """Initialize the water consumption sensor."""
         super().__init__(coordinator)
         self._attr_unique_id = f"{coordinator.entry.entry_id}_water"
 
     @property
     def native_value(self) -> float | None:
+        """Return the current meter reading."""
         return self._coordinator.reading
 
 
@@ -82,9 +91,11 @@ class DaysSinceReadingSensor(_BaseSensor):
     _attr_icon = "mdi:calendar-clock"
 
     def __init__(self, coordinator: ManualWaterMeterCoordinator) -> None:
+        """Initialize the days-since-reading sensor."""
         super().__init__(coordinator)
         self._attr_unique_id = f"{coordinator.entry.entry_id}_days_since_reading"
 
     @property
     def native_value(self) -> float | None:
+        """Return the number of days since the last reading."""
         return self._coordinator.days_since_update

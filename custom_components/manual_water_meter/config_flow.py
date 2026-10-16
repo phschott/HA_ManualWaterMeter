@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any
 
 import voluptuous as vol
-
 from homeassistant.config_entries import (
     ConfigEntry,
     ConfigFlow,
@@ -53,9 +52,7 @@ class ManualWaterMeterConfigFlow(ConfigFlow, domain=DOMAIN):
             return self.async_create_entry(
                 title=user_input[CONF_NAME],
                 data={},
-                options={
-                    CONF_REMINDER_DAYS: int(user_input[CONF_REMINDER_DAYS])
-                },
+                options={CONF_REMINDER_DAYS: int(user_input[CONF_REMINDER_DAYS])},
             )
 
         schema = vol.Schema(
@@ -71,7 +68,7 @@ class ManualWaterMeterConfigFlow(ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(
-        config_entry: ConfigEntry,
+        config_entry: ConfigEntry,  # noqa: ARG004
     ) -> ManualWaterMeterOptionsFlow:
         """Return the options flow handler."""
         return ManualWaterMeterOptionsFlow()
@@ -94,9 +91,7 @@ class ManualWaterMeterOptionsFlow(OptionsFlow):
         )
         schema = vol.Schema(
             {
-                vol.Required(
-                    CONF_REMINDER_DAYS, default=current
-                ): _REMINDER_SELECTOR,
+                vol.Required(CONF_REMINDER_DAYS, default=current): _REMINDER_SELECTOR,
             }
         )
         return self.async_show_form(step_id="init", data_schema=schema)

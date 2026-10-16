@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
 import logging
+from datetime import datetime, timedelta
+from typing import TYPE_CHECKING
 
 from homeassistant.components import persistent_notification
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import async_track_time_interval
@@ -23,6 +23,10 @@ from .const import (
     STORAGE_VERSION,
 )
 
+if TYPE_CHECKING:
+    from homeassistant.config_entries import ConfigEntry
+    from homeassistant.core import HomeAssistant
+
 _LOGGER = logging.getLogger(__name__)
 
 # How often we re-evaluate whether a reading is overdue.
@@ -36,9 +40,7 @@ class ManualWaterMeterCoordinator:
         """Initialize the coordinator."""
         self.hass = hass
         self.entry = entry
-        self._store: Store = Store(
-            hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}"
-        )
+        self._store: Store = Store(hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}")
         self.reading: float | None = None
         self.last_updated: datetime | None = None
         self._reminder_notified: bool = False
@@ -49,9 +51,7 @@ class ManualWaterMeterCoordinator:
     @property
     def reminder_days(self) -> int:
         """Return the configured reminder interval in days."""
-        return int(
-            self.entry.options.get(CONF_REMINDER_DAYS, DEFAULT_REMINDER_DAYS)
-        )
+        return int(self.entry.options.get(CONF_REMINDER_DAYS, DEFAULT_REMINDER_DAYS))
 
     @property
     def signal(self) -> str:
@@ -96,9 +96,7 @@ class ManualWaterMeterCoordinator:
             return
         self.reading = data.get("reading")
         timestamp = data.get("last_updated")
-        self.last_updated = (
-            dt_util.parse_datetime(timestamp) if timestamp else None
-        )
+        self.last_updated = dt_util.parse_datetime(timestamp) if timestamp else None
         self._reminder_notified = data.get("reminder_notified", False)
 
     async def _async_save(self) -> None:
