@@ -1,0 +1,50 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Manual Water Meter",
+        "description": "Add a water meter you read by hand.",
+        "data": {
+          "name": "Name",
+          "reminder_days": "Reminder frequency (days)"
+        },
+        "data_description": {
+          "reminder_days": "How often you want to be reminded to take a new reading."
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Manual Water Meter options",
+        "data": {
+          "reminder_days": "Reminder frequency (days)"
+        },
+        "data_description": {
+          "reminder_days": "How often you want to be reminded to take a new reading."
+        }
+      }
+    }
+  },
+  "entity": {
+    "number": {
+      "meter_reading": {
+        "name": "Meter reading"
+      }
+    },
+    "sensor": {
+      "water": {
+        "name": "Water consumption"
+      },
+      "days_since_reading": {
+        "name": "Days since last reading"
+      }
+    },
+    "binary_sensor": {
+      "reminder": {
+        "name": "Reading reminder"
+      }
+    }
+  }
+}

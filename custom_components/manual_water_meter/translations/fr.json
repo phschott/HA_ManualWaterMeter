@@ -1,0 +1,50 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Compteur d'eau manuel",
+        "description": "Ajoutez un compteur d'eau que vous relevez à la main.",
+        "data": {
+          "name": "Nom",
+          "reminder_days": "Fréquence de rappel (jours)"
+        },
+        "data_description": {
+          "reminder_days": "À quelle fréquence vous souhaitez être rappelé de faire un nouveau relevé."
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options du compteur d'eau manuel",
+        "data": {
+          "reminder_days": "Fréquence de rappel (jours)"
+        },
+        "data_description": {
+          "reminder_days": "À quelle fréquence vous souhaitez être rappelé de faire un nouveau relevé."
+        }
+      }
+    }
+  },
+  "entity": {
+    "number": {
+      "meter_reading": {
+        "name": "Relevé du compteur"
+      }
+    },
+    "sensor": {
+      "water": {
+        "name": "Consommation d'eau"
+      },
+      "days_since_reading": {
+        "name": "Jours depuis le dernier relevé"
+      }
+    },
+    "binary_sensor": {
+      "reminder": {
+        "name": "Rappel de relevé"
+      }
+    }
+  }
+}
