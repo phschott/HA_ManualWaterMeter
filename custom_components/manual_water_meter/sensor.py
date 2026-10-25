@@ -11,7 +11,13 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.const import UnitOfTime, UnitOfVolume
 from homeassistant.core import callback
+from homeassistant.exceptions import ServiceValidationError
+from homeassistant.helpers import entity_platform
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
+
+from .const import SERVICE_IMPORT_HISTORY
+from .services import IMPORT_HISTORY_SCHEMA, read_csv_file
+from .statistics_import import async_import_history as import_water_history
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
@@ -26,13 +32,20 @@ async def async_setup_entry(
     entry: ManualWaterMeterConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the sensor entities."""
+    """Set up the sensor entities and the import_history entity service."""
     coordinator = entry.runtime_data
     async_add_entities(
         [
             WaterConsumptionSensor(coordinator),
             DaysSinceReadingSensor(coordinator),
         ]
+    )
+
+    platform = entity_platform.async_get_current_platform()
+    platform.async_register_entity_service(
+        SERVICE_IMPORT_HISTORY,
+        IMPORT_HISTORY_SCHEMA,
+        "async_import_history",
     )
 
 
@@ -78,6 +91,35 @@ class WaterConsumptionSensor(_BaseSensor):
     def native_value(self) -> float | None:
         """Return the current meter reading."""
         return self._coordinator.reading
+
+    async def async_import_history(
+        self,
+        filename: str | None = None,
+        csv: str | None = None,
+        *,
+        update_current: bool = True,
+    ) -> None:
+        """Import a consumption history (import_history service handler)."""
+        if not filename and not csv:
+            message = "provide either 'filename' or 'csv'"
+            raise ServiceValidationError(message)
+
+        if filename:
+            content = await self.hass.async_add_executor_job(
+                read_csv_file, self.hass, filename
+            )
+        else:
+            content = csv or ""
+
+        try:
+            summary = await import_water_history(
+                self.hass, statistic_id=self.entity_id, content=content
+            )
+        except ValueError as err:
+            raise ServiceValidationError(str(err)) from err
+
+        if update_current:
+            await self._coordinator.async_set_reading(summary.last_reading)
 
 
 class DaysSinceReadingSensor(_BaseSensor):

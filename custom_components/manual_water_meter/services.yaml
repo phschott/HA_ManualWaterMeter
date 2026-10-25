@@ -1,0 +1,22 @@
+import_history:
+  target:
+    entity:
+      integration: manual_water_meter
+      domain: sensor
+  fields:
+    filename:
+      example: "/config/water_history.csv"
+      selector:
+        text:
+    csv:
+      example: |
+        date,reading
+        2025-01-01,123.456
+        2025-02-01,128.900
+      selector:
+        text:
+          multiline: true
+    update_current:
+      default: true
+      selector:
+        boolean:
