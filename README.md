@@ -71,6 +71,56 @@ data:
 
 Use it in an automation to send a mobile notification, an email, etc.
 
+## Importing a consumption history
+
+You can back-fill past consumption from a CSV of **absolute meter readings** with
+the `manual_water_meter.import_history` service. The data is written as
+**long-term statistics** for the water sensor, so it shows up retroactively in the
+Energy dashboard. Consumption between two readings is spread evenly over each hour
+of the interval, and re-importing the same range is idempotent (no double count).
+
+### CSV format
+
+Two columns: an ISO 8601 `date` (or datetime) and the absolute meter `reading` in m³.
+
+```csv
+date,reading
+2025-01-01,123.456
+2025-02-01,128.900
+2025-03-01,134.010
+```
+
+- A date without a time is taken at local midnight.
+- The reading is the cumulative meter index; it must never decrease.
+- A header row is optional; `;` separators (French Excel) and `,` decimals are tolerated.
+
+### Calling the service
+
+```yaml
+action: manual_water_meter.import_history
+target:
+  entity_id: sensor.water_meter_water_consumption
+data:
+  filename: /config/water_history.csv   # or inline with `csv:`
+  update_current: true                  # also set the meter to the last reading
+```
+
+Inline variant:
+
+```yaml
+action: manual_water_meter.import_history
+target:
+  entity_id: sensor.water_meter_water_consumption
+data:
+  csv: |
+    date,reading
+    2025-01-01,123.456
+    2025-02-01,128.900
+```
+
+> Note: this is meant to seed history *before* the sensor started recording. A small
+> discontinuity may appear where imported data meets the live statistics.
+
 ## License
 
 [MIT](LICENSE) © PH Schott

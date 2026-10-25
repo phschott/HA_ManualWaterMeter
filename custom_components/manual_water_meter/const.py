@@ -28,6 +28,18 @@ SIGNAL_UPDATE = f"{DOMAIN}_update"
 # Event fired when a reading is overdue
 EVENT_REMINDER = f"{DOMAIN}_reminder"
 
+# Statistics import service
+SERVICE_IMPORT_HISTORY = "import_history"
+ATTR_FILENAME = "filename"
+ATTR_CSV = "csv"
+ATTR_UPDATE_CURRENT = "update_current"
+
+# Source tag required by the recorder for entity-backed statistics
+RECORDER_SOURCE = "recorder"
+# Minimum columns / rows expected in a history CSV
+MIN_CSV_COLUMNS = 2
+MIN_READINGS = 2
+
 PLATFORMS: list[Platform] = [
     Platform.NUMBER,
     Platform.SENSOR,

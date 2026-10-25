@@ -46,5 +46,25 @@
         "name": "Reading reminder"
       }
     }
+  },
+  "services": {
+    "import_history": {
+      "name": "Import history",
+      "description": "Import a water consumption history from a CSV of absolute meter readings. Data is written as long-term statistics so it appears in the Energy dashboard.",
+      "fields": {
+        "filename": {
+          "name": "File",
+          "description": "Path to a CSV file, e.g. /config/water_history.csv. Relative paths are resolved under the config directory."
+        },
+        "csv": {
+          "name": "CSV content",
+          "description": "CSV content pasted inline, with columns date,reading (meter value in m³)."
+        },
+        "update_current": {
+          "name": "Update current reading",
+          "description": "Also set the meter's current reading to the last value found in the CSV."
+        }
+      }
+    }
   }
 }

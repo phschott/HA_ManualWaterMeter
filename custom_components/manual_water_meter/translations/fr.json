@@ -46,5 +46,25 @@
         "name": "Rappel de relevé"
       }
     }
+  },
+  "services": {
+    "import_history": {
+      "name": "Importer un historique",
+      "description": "Importe un historique de consommation d'eau depuis un CSV de relevés absolus du compteur. Les données sont écrites en statistiques long terme afin d'apparaître dans le tableau de bord Energy.",
+      "fields": {
+        "filename": {
+          "name": "Fichier",
+          "description": "Chemin d'un fichier CSV, par ex. /config/water_history.csv. Les chemins relatifs sont résolus dans le dossier de configuration."
+        },
+        "csv": {
+          "name": "Contenu CSV",
+          "description": "Contenu CSV collé directement, avec les colonnes date,reading (valeur du compteur en m³)."
+        },
+        "update_current": {
+          "name": "Mettre à jour le relevé courant",
+          "description": "Définit aussi le relevé courant du compteur sur la dernière valeur du CSV."
+        }
+      }
+    }
   }
 }
