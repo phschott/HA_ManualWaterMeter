@@ -31,11 +31,17 @@
     "number": {
       "meter_reading": {
         "name": "Meter reading"
+      },
+      "water_price": {
+        "name": "Water price"
       }
     },
     "sensor": {
       "water": {
         "name": "Water consumption"
+      },
+      "water_cost": {
+        "name": "Water cost"
       },
       "days_since_reading": {
         "name": "Days since last reading"
@@ -58,11 +64,15 @@
         },
         "csv": {
           "name": "CSV content",
-          "description": "CSV content pasted inline, with columns date,reading (meter value in m³)."
+          "description": "CSV content pasted inline, with columns date,reading and an optional price (meter value in m³, price per m³)."
+        },
+        "price": {
+          "name": "Fallback price",
+          "description": "Price per m³ used for cost when the CSV has no price column. Ignored if a price column is present."
         },
         "update_current": {
           "name": "Update current reading",
-          "description": "Also set the meter's current reading to the last value found in the CSV."
+          "description": "Also set the meter's current reading and cost to the last values found in the CSV."
         }
       }
     }

@@ -13,9 +13,10 @@ from homeassistant.const import UnitOfTime, UnitOfVolume
 from homeassistant.core import callback
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_platform
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
-from .const import SERVICE_IMPORT_HISTORY
+from .const import DEFAULT_CURRENCY, DOMAIN, SERVICE_IMPORT_HISTORY
 from .services import IMPORT_HISTORY_SCHEMA, read_csv_file
 from .statistics_import import async_import_history as import_water_history
 
@@ -37,6 +38,7 @@ async def async_setup_entry(
     async_add_entities(
         [
             WaterConsumptionSensor(coordinator),
+            WaterCostSensor(coordinator),
             DaysSinceReadingSensor(coordinator),
         ]
     )
@@ -96,10 +98,11 @@ class WaterConsumptionSensor(_BaseSensor):
         self,
         filename: str | None = None,
         csv: str | None = None,
+        price: float | None = None,
         *,
         update_current: bool = True,
     ) -> None:
-        """Import a consumption history (import_history service handler)."""
+        """Import a consumption (and cost) history (import_history handler)."""
         if not filename and not csv:
             message = "provide either 'filename' or 'csv'"
             raise ServiceValidationError(message)
@@ -111,15 +114,53 @@ class WaterConsumptionSensor(_BaseSensor):
         else:
             content = csv or ""
 
+        entry_id = self._coordinator.entry.entry_id
+        cost_statistic_id = er.async_get(self.hass).async_get_entity_id(
+            "sensor", DOMAIN, f"{entry_id}_cost"
+        )
+        currency = self.hass.config.currency or DEFAULT_CURRENCY
+
         try:
             summary = await import_water_history(
-                self.hass, statistic_id=self.entity_id, content=content
+                self.hass,
+                statistic_id=self.entity_id,
+                cost_statistic_id=cost_statistic_id,
+                content=content,
+                currency=currency,
+                fallback_price=price,
             )
         except ValueError as err:
             raise ServiceValidationError(str(err)) from err
 
         if update_current:
-            await self._coordinator.async_set_reading(summary.last_reading)
+            await self._coordinator.async_apply_import(
+                reading=summary.last_reading,
+                cost=summary.last_cost,
+                price=summary.last_price,
+            )
+
+
+class WaterCostSensor(_BaseSensor):
+    """Cumulative water cost, for the Energy dashboard's total-cost option."""
+
+    _attr_translation_key = "water_cost"
+    _attr_device_class = SensorDeviceClass.MONETARY
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+    _attr_suggested_display_precision = 2
+    _attr_icon = "mdi:cash-multiple"
+
+    def __init__(self, coordinator: ManualWaterMeterCoordinator) -> None:
+        """Initialize the water cost sensor."""
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{coordinator.entry.entry_id}_cost"
+        self._attr_native_unit_of_measurement = (
+            coordinator.hass.config.currency or DEFAULT_CURRENCY
+        )
+
+    @property
+    def native_value(self) -> float:
+        """Return the cumulative water cost."""
+        return self._coordinator.cost
 
 
 class DaysSinceReadingSensor(_BaseSensor):

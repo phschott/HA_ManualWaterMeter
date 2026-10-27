@@ -10,12 +10,20 @@ import_history:
         text:
     csv:
       example: |
-        date,reading
-        2025-01-01,123.456
-        2025-02-01,128.900
+        date,reading,price
+        2025-01-01,123.456,4.30
+        2025-02-01,128.900,4.30
       selector:
         text:
           multiline: true
+    price:
+      example: 4.30
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 0.001
+          mode: box
     update_current:
       default: true
       selector:

@@ -22,6 +22,13 @@ METER_MIN = 0
 METER_MAX = 9999
 METER_STEP = 0.001
 
+# Water price bounds (currency per m³)
+DEFAULT_PRICE = 5.0
+PRICE_MIN = 0
+PRICE_MAX = 100
+PRICE_STEP = 0.001
+DEFAULT_CURRENCY = "EUR"
+
 # Dispatcher signal (suffixed with the entry id at runtime)
 SIGNAL_UPDATE = f"{DOMAIN}_update"
 
@@ -33,6 +40,7 @@ SERVICE_IMPORT_HISTORY = "import_history"
 ATTR_FILENAME = "filename"
 ATTR_CSV = "csv"
 ATTR_UPDATE_CURRENT = "update_current"
+ATTR_PRICE = "price"
 
 # Source tag required by the recorder for entity-backed statistics
 RECORDER_SOURCE = "recorder"

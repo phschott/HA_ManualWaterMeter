@@ -19,6 +19,9 @@ printed on the meter whenever you read it, and Home Assistant does the rest.
 - **Energy dashboard source** — a `sensor` with `device_class: water` and
   `state_class: total_increasing` (unit m³), so it can be selected as a **water source**
   in Settings → Dashboards → Energy.
+- **Price & cost tracking** — a `number` entity to set/update the water price (currency
+  per m³) and a cumulative **cost** `sensor` (`device_class: monetary`) you can attach to
+  the Energy water source as its *total cost* entity.
 - **Configurable reminder** — set a reminder frequency (in days). When a new reading is
   overdue the integration raises a persistent notification, turns on a
   `binary_sensor`, and fires a `manual_water_meter_reminder` event you can use in
@@ -29,7 +32,9 @@ printed on the meter whenever you read it, and Home Assistant does the rest.
 | Entity | Type | Purpose |
 | --- | --- | --- |
 | `number.<name>_meter_reading` | Number | Enter the current meter value (m³) |
+| `number.<name>_water_price` | Number | Set/update the water price (currency per m³) |
 | `sensor.<name>_water_consumption` | Sensor | Water source for the Energy dashboard |
+| `sensor.<name>_water_cost` | Sensor | Cumulative cost, for the Energy *total cost* option |
 | `sensor.<name>_days_since_last_reading` | Sensor | Days elapsed since the last reading |
 | `binary_sensor.<name>_reading_reminder` | Binary sensor | `on` when a reading is overdue |
 
@@ -61,6 +66,13 @@ Because the reading is a cumulative meter value, it is exposed as
 `total_increasing`: enter the raw number from your meter each time (always increasing),
 and the Energy dashboard computes the consumption between readings.
 
+### Tracking cost
+
+Set the price with `number.<name>_water_price` (currency per m³). The integration keeps
+a cumulative `sensor.<name>_water_cost`. On the Energy water source, choose
+**Use an entity tracking the total costs** and select that cost sensor — this is what
+lets imported history carry its own historical prices (see below).
+
 ## Reminder event
 
 When a reading becomes overdue, a `manual_water_meter_reminder` event is fired with:
@@ -80,23 +92,28 @@ Use it in an automation to send a mobile notification, an email, etc.
 
 You can back-fill past consumption from a CSV of **absolute meter readings** with
 the `manual_water_meter.import_history` service. The data is written as
-**long-term statistics** for the water sensor, so it shows up retroactively in the
-Energy dashboard. Consumption between two readings is spread evenly over each hour
+**long-term statistics** for the water (and cost) sensor, so it shows up retroactively in
+the Energy dashboard. Consumption between two readings is spread evenly over each hour
 of the interval, and re-importing the same range is idempotent (no double count).
 
 ### CSV format
 
-Two columns: an ISO 8601 `date` (or datetime) and the absolute meter `reading` in m³.
+An ISO 8601 `date` (or datetime), the absolute meter `reading` in m³, and an **optional**
+`price` (currency per m³ in effect from that date).
 
 ```csv
-date,reading
-2025-01-01,123.456
-2025-02-01,128.900
-2025-03-01,134.010
+date,reading,price
+2025-01-01,123.456,4.30
+2025-02-01,128.900,4.30
+2025-03-01,134.010,4.55
 ```
 
 - A date without a time is taken at local midnight.
 - The reading is the cumulative meter index; it must never decrease.
+- The `price` column is optional. When present, cost is computed hourly from consumption
+  times the price in effect (a step function, so a mid-history rate change is honored).
+  When absent, the service's `price` field is used as a flat fallback; with neither, no
+  cost is imported.
 - A header row is optional; `;` separators (French Excel) and `,` decimals are tolerated.
 
 ### Calling the service
@@ -107,7 +124,8 @@ target:
   entity_id: sensor.water_meter_water_consumption
 data:
   filename: /config/water_history.csv   # or inline with `csv:`
-  update_current: true                  # also set the meter to the last reading
+  price: 4.30                           # flat fallback if the CSV has no price column
+  update_current: true                  # also set the meter + cost to the last values
 ```
 
 Inline variant:
@@ -118,9 +136,9 @@ target:
   entity_id: sensor.water_meter_water_consumption
 data:
   csv: |
-    date,reading
-    2025-01-01,123.456
-    2025-02-01,128.900
+    date,reading,price
+    2025-01-01,123.456,4.30
+    2025-02-01,128.900,4.55
 ```
 
 > Note: this is meant to seed history *before* the sensor started recording. A small
