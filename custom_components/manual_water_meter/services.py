@@ -8,7 +8,14 @@ from typing import TYPE_CHECKING
 import voluptuous as vol
 from homeassistant.helpers import config_validation as cv
 
-from .const import ATTR_CSV, ATTR_FILENAME, ATTR_UPDATE_CURRENT
+from .const import (
+    ATTR_CSV,
+    ATTR_FILENAME,
+    ATTR_PRICE,
+    ATTR_UPDATE_CURRENT,
+    PRICE_MAX,
+    PRICE_MIN,
+)
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
@@ -17,6 +24,9 @@ if TYPE_CHECKING:
 IMPORT_HISTORY_SCHEMA = {
     vol.Exclusive(ATTR_FILENAME, "source"): cv.string,
     vol.Exclusive(ATTR_CSV, "source"): cv.string,
+    vol.Optional(ATTR_PRICE): vol.All(
+        vol.Coerce(float), vol.Range(min=PRICE_MIN, max=PRICE_MAX)
+    ),
     vol.Optional(ATTR_UPDATE_CURRENT, default=True): cv.boolean,
 }
 

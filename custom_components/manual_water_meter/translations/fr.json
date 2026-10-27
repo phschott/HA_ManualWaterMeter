@@ -31,11 +31,17 @@
     "number": {
       "meter_reading": {
         "name": "Relevé du compteur"
+      },
+      "water_price": {
+        "name": "Prix de l'eau"
       }
     },
     "sensor": {
       "water": {
         "name": "Consommation d'eau"
+      },
+      "water_cost": {
+        "name": "Coût de l'eau"
       },
       "days_since_reading": {
         "name": "Jours depuis le dernier relevé"
@@ -58,11 +64,15 @@
         },
         "csv": {
           "name": "Contenu CSV",
-          "description": "Contenu CSV collé directement, avec les colonnes date,reading (valeur du compteur en m³)."
+          "description": "Contenu CSV collé directement, avec les colonnes date,reading et un prix optionnel (valeur du compteur en m³, prix par m³)."
+        },
+        "price": {
+          "name": "Prix par défaut",
+          "description": "Prix par m³ utilisé pour le coût quand le CSV n'a pas de colonne prix. Ignoré si une colonne prix est présente."
         },
         "update_current": {
           "name": "Mettre à jour le relevé courant",
-          "description": "Définit aussi le relevé courant du compteur sur la dernière valeur du CSV."
+          "description": "Définit aussi le relevé courant et le coût du compteur sur les dernières valeurs du CSV."
         }
       }
     }

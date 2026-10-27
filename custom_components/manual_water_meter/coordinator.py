@@ -17,6 +17,7 @@ from homeassistant.util import dt as dt_util
 from .const import (
     CONF_REMINDER_DAYS,
     DEFAULT_LANGUAGE,
+    DEFAULT_PRICE,
     DEFAULT_REMINDER_DAYS,
     DOMAIN,
     EVENT_REMINDER,
@@ -45,6 +46,8 @@ class ManualWaterMeterCoordinator:
         self._store: Store = Store(hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}")
         self.reading: float | None = None
         self.last_updated: datetime | None = None
+        self.price: float = DEFAULT_PRICE
+        self.cost: float = 0.0
         self._reminder_notified: bool = False
         self._unsub_timer: callback | None = None
 
@@ -99,6 +102,8 @@ class ManualWaterMeterCoordinator:
         self.reading = data.get("reading")
         timestamp = data.get("last_updated")
         self.last_updated = dt_util.parse_datetime(timestamp) if timestamp else None
+        self.price = data.get("price", DEFAULT_PRICE)
+        self.cost = data.get("cost", 0.0)
         self._reminder_notified = data.get("reminder_notified", False)
 
     async def _async_save(self) -> None:
@@ -109,6 +114,8 @@ class ManualWaterMeterCoordinator:
                 "last_updated": (
                     self.last_updated.isoformat() if self.last_updated else None
                 ),
+                "price": self.price,
+                "cost": self.cost,
                 "reminder_notified": self._reminder_notified,
             }
         )
@@ -116,8 +123,35 @@ class ManualWaterMeterCoordinator:
     # --- Mutations ------------------------------------------------------------
 
     async def async_set_reading(self, value: float) -> None:
-        """Record a new meter reading and reset the reminder."""
+        """Record a new meter reading, accrue its cost, and reset the reminder."""
+        if self.reading is not None and value > self.reading:
+            self.cost += (value - self.reading) * self.price
         self.reading = value
+        self.last_updated = dt_util.utcnow()
+        self._reminder_notified = False
+        persistent_notification.async_dismiss(self.hass, self._notification_id)
+        await self._async_save()
+        self._notify()
+
+    async def async_set_price(self, value: float) -> None:
+        """Update the current water price (does not alter past cost)."""
+        self.price = value
+        await self._async_save()
+        self._notify()
+
+    async def async_apply_import(
+        self, *, reading: float, cost: float, price: float | None
+    ) -> None:
+        """
+        Align live state with the last values of an imported history.
+
+        Sets the reading and cumulative cost directly (no delta accrual) so the
+        live sensors continue seamlessly from where the import left off.
+        """
+        self.reading = reading
+        self.cost = cost
+        if price is not None:
+            self.price = price
         self.last_updated = dt_util.utcnow()
         self._reminder_notified = False
         persistent_notification.async_dismiss(self.hass, self._notification_id)
