@@ -2,6 +2,7 @@
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
 [![GitHub release](https://img.shields.io/github/release/phschott/HA_ManualWaterMeter.svg)](https://github.com/phschott/HA_ManualWaterMeter/releases)
+[![GitHub downloads](https://img.shields.io/github/downloads/phschott/HA_ManualWaterMeter/total.svg)](https://github.com/phschott/HA_ManualWaterMeter/releases)
 [![GitHub license](https://img.shields.io/github/license/phschott/HA_ManualWaterMeter.svg)](LICENSE)
 [![HA community](https://img.shields.io/badge/community-Home%20Assistant-blue.svg)](https://community.home-assistant.io)
 
