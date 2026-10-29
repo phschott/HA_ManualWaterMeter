@@ -2,5 +2,7 @@
   "name": "Manual Water Meter",
   "content_in_root": false,
   "render_readme": true,
+  "zip_release": true,
+  "filename": "manual_water_meter.zip",
   "homeassistant": "2024.12.0"
 }
