@@ -13,10 +13,9 @@ from homeassistant.const import UnitOfTime, UnitOfVolume
 from homeassistant.core import callback
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_platform
-from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
-from .const import DEFAULT_CURRENCY, DOMAIN, SERVICE_IMPORT_HISTORY
+from .const import DEFAULT_CURRENCY, SERVICE_IMPORT_HISTORY
 from .services import IMPORT_HISTORY_SCHEMA, read_csv_file
 from .statistics_import import async_import_history as import_water_history
 
@@ -77,9 +76,10 @@ class _BaseSensor(SensorEntity):
 class WaterConsumptionSensor(_BaseSensor):
     """Exposes the meter reading for the HA Energy dashboard."""
 
+    # No state_class: the integration owns this sensor's statistics (so it can
+    # spread consumption over time); the recorder must not also compute them.
     _attr_translation_key = "water"
     _attr_device_class = SensorDeviceClass.WATER
-    _attr_state_class = SensorStateClass.TOTAL_INCREASING
     _attr_native_unit_of_measurement = UnitOfVolume.CUBIC_METERS
     _attr_suggested_display_precision = 3
     _attr_icon = "mdi:water"
@@ -114,19 +114,11 @@ class WaterConsumptionSensor(_BaseSensor):
         else:
             content = csv or ""
 
-        entry_id = self._coordinator.entry.entry_id
-        cost_statistic_id = er.async_get(self.hass).async_get_entity_id(
-            "sensor", DOMAIN, f"{entry_id}_cost"
-        )
-        currency = self.hass.config.currency or DEFAULT_CURRENCY
-
         try:
             summary = await import_water_history(
                 self.hass,
-                statistic_id=self.entity_id,
-                cost_statistic_id=cost_statistic_id,
+                self._coordinator.stat_target,
                 content=content,
-                currency=currency,
                 fallback_price=price,
             )
         except ValueError as err:
@@ -135,17 +127,19 @@ class WaterConsumptionSensor(_BaseSensor):
         if update_current:
             await self._coordinator.async_apply_import(
                 reading=summary.last_reading,
+                volume=summary.last_volume,
                 cost=summary.last_cost,
                 price=summary.last_price,
+                when=summary.last_date,
             )
 
 
 class WaterCostSensor(_BaseSensor):
     """Cumulative water cost, for the Energy dashboard's total-cost option."""
 
+    # No state_class: statistics are owned by the integration (see above).
     _attr_translation_key = "water_cost"
     _attr_device_class = SensorDeviceClass.MONETARY
-    _attr_state_class = SensorStateClass.TOTAL_INCREASING
     _attr_suggested_display_precision = 2
     _attr_icon = "mdi:cash-multiple"
 

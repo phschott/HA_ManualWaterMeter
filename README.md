@@ -17,12 +17,12 @@ printed on the meter whenever you read it, and Home Assistant does the rest.
 
 - **Meter reading input** — a `number` entity in m³ (min `0`, max `9999`, step `0.001`)
   where you enter the value shown on your physical meter.
-- **Energy dashboard source** — a `sensor` with `device_class: water` and
-  `state_class: total_increasing` (unit m³), so it can be selected as a **water source**
-  in Settings → Dashboards → Energy.
+- **Energy dashboard source** — the integration publishes smoothed **external
+  statistics** (`<name> water consumption` in m³) selectable as a **water source** in
+  Settings → Dashboards → Energy.
 - **Price & cost tracking** — a `number` entity to set/update the water price (currency
-  per m³) and a cumulative **cost** `sensor` (`device_class: monetary`) you can attach to
-  the Energy water source as its *total cost* entity.
+  per m³) and a smoothed **cost** statistic (`<name> water cost`) you select as the Energy
+  cost statistic.
 - **Configurable reminder** — set a reminder frequency (in days). When a new reading is
   overdue the integration raises a persistent notification, turns on a
   `binary_sensor`, and fires a `manual_water_meter_reminder` event you can use in
@@ -34,10 +34,12 @@ printed on the meter whenever you read it, and Home Assistant does the rest.
 | --- | --- | --- |
 | `number.<name>_meter_reading` | Number | Enter the current meter value (m³) |
 | `number.<name>_water_price` | Number | Set/update the water price (currency per m³) |
-| `sensor.<name>_water_consumption` | Sensor | Water source for the Energy dashboard |
-| `sensor.<name>_water_cost` | Sensor | Cumulative cost, for the Energy *total cost* option |
+| `sensor.<name>_water_consumption` | Sensor | Shows the current meter reading (display) |
+| `sensor.<name>_water_cost` | Sensor | Shows the current cumulative cost (display) |
 | `sensor.<name>_days_since_last_reading` | Sensor | Days elapsed since the last reading |
 | `binary_sensor.<name>_reading_reminder` | Binary sensor | `on` when a reading is overdue |
+| `<name> water consumption` | Statistic | Smoothed consumption (m³) — the Energy water source |
+| `<name> water cost` | Statistic | Smoothed cost — the Energy cost statistic |
 
 ## Installation
 
@@ -60,19 +62,45 @@ Copy `custom_components/manual_water_meter` into your Home Assistant
 
 ## Adding to the Energy dashboard
 
-Settings → Dashboards → **Energy** → *Add water source* →
-select `sensor.<name>_water_consumption`.
+Enter the raw cumulative number from your meter each time (always increasing).
 
-Because the reading is a cumulative meter value, it is exposed as
-`total_increasing`: enter the raw number from your meter each time (always increasing),
-and the Energy dashboard computes the consumption between readings.
+The integration publishes its data as **external statistics** it fully owns, which show
+up in the Energy pickers by name:
+
+- `<name> water consumption` (m³) — the water source
+- `<name> water cost` (currency) — the cost
+
+Settings → Dashboards → **Energy** → *Add water source* → select **`<name> water
+consumption`**. For cost, choose **Use a statistic for costs** and select **`<name> water
+cost`**.
+
+> With an external-statistics source, Home Assistant disables the "fixed price" and "cost
+> entity" cost options — that is why the integration provides a ready-made cost statistic.
+
+### Smoothed consumption
+
+Because days often pass between two manual readings, a naïve meter would dump the whole
+consumption onto the single day you enter the value — one tall spike, zeros around it.
+Instead, this integration **owns its statistics** and spreads the consumption **evenly,
+hour by hour, between the previous reading and the new one**, so the daily Energy curve
+is smooth. The same smoothing applies to imported history.
+
+> **Why external statistics?** An entity-based water source must carry a `state_class`,
+> but then Home Assistant's recorder would compute its statistics from the state and
+> double-count the smoothed values the integration injects. Publishing self-owned
+> external statistics avoids both the double-count and the "unexpected state class"
+> Energy warning.
+>
+> **Upgrading from an earlier version** that used an entity source: clear the old
+> statistics of `sensor.<name>_water_consumption` and `sensor.<name>_water_cost` once in
+> Developer Tools → Statistics, remove the old entity from the Energy dashboard, and add
+> the new `<name> water consumption` / `<name> water cost` statistics instead.
 
 ### Tracking cost
 
-Set the price with `number.<name>_water_price` (currency per m³). The integration keeps
-a cumulative `sensor.<name>_water_cost`. On the Energy water source, choose
-**Use an entity tracking the total costs** and select that cost sensor — this is what
-lets imported history carry its own historical prices (see below).
+Set the price with `number.<name>_water_price` (currency per m³). Cost is accrued as the
+`<name> water cost` statistic (consumption × price), which you select as the Energy cost
+statistic. Imported history carries its own per-date prices (see below).
 
 ## Reminder event
 
