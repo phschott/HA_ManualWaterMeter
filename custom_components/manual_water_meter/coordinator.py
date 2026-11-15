@@ -16,6 +16,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import (
     CONF_REMINDER_DAYS,
+    DEFAULT_CURRENCY,
     DEFAULT_LANGUAGE,
     DEFAULT_PRICE,
     DEFAULT_REMINDER_DAYS,
@@ -25,6 +26,7 @@ from .const import (
     SIGNAL_UPDATE,
     STORAGE_VERSION,
 )
+from .statistics_import import StatTarget, record_reading
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -47,6 +49,7 @@ class ManualWaterMeterCoordinator:
         self.reading: float | None = None
         self.last_updated: datetime | None = None
         self.price: float = DEFAULT_PRICE
+        self.volume: float = 0.0
         self.cost: float = 0.0
         self._reminder_notified: bool = False
         self._unsub_timer: callback | None = None
@@ -103,6 +106,7 @@ class ManualWaterMeterCoordinator:
         timestamp = data.get("last_updated")
         self.last_updated = dt_util.parse_datetime(timestamp) if timestamp else None
         self.price = data.get("price", DEFAULT_PRICE)
+        self.volume = data.get("volume", 0.0)
         self.cost = data.get("cost", 0.0)
         self._reminder_notified = data.get("reminder_notified", False)
 
@@ -115,19 +119,61 @@ class ManualWaterMeterCoordinator:
                     self.last_updated.isoformat() if self.last_updated else None
                 ),
                 "price": self.price,
+                "volume": self.volume,
                 "cost": self.cost,
                 "reminder_notified": self._reminder_notified,
             }
         )
 
+    # --- Statistics target ----------------------------------------------------
+
+    @property
+    def stat_target(self) -> StatTarget:
+        """External-statistics ids, names and currency for this meter."""
+        # A statistic_id must match ^[\\da-z_]+:[\\da-z_]+$ (lowercase only), but
+        # the config entry_id is an ULID that contains uppercase letters, so it
+        # must be lowercased here or HA rejects it with "Invalid statistic_id".
+        entry_id = self.entry.entry_id.lower()
+        currency = self.hass.config.currency or DEFAULT_CURRENCY
+        return StatTarget(
+            water_id=f"{DOMAIN}:{entry_id}_water",
+            water_name=f"{self.entry.title} water consumption",
+            cost_id=f"{DOMAIN}:{entry_id}_cost",
+            cost_name=f"{self.entry.title} water cost",
+            currency=currency,
+        )
+
     # --- Mutations ------------------------------------------------------------
 
     async def async_set_reading(self, value: float) -> None:
-        """Record a new meter reading, accrue its cost, and reset the reminder."""
-        if self.reading is not None and value > self.reading:
-            self.cost += (value - self.reading) * self.price
+        """
+        Record a new reading, spreading its consumption since the last one.
+
+        Consumption between the previous reading and now is written as smoothed
+        hourly statistics, so the Energy dashboard shows an even daily curve
+        instead of one spike on the day the value is entered.
+        """
+        now = dt_util.utcnow()
+        if (
+            self.reading is not None
+            and self.last_updated is not None
+            and self.last_updated < now
+            and value >= self.reading
+        ):
+            readings = [(self.last_updated, self.reading), (now, value)]
+        else:
+            readings = [(now, value)]
+        self.volume, self.cost = record_reading(
+            self.hass,
+            self.stat_target,
+            readings=readings,
+            price=self.price,
+            volume_offset=self.volume,
+            cost_offset=self.cost,
+        )
+
         self.reading = value
-        self.last_updated = dt_util.utcnow()
+        self.last_updated = now
         self._reminder_notified = False
         persistent_notification.async_dismiss(self.hass, self._notification_id)
         await self._async_save()
@@ -140,19 +186,28 @@ class ManualWaterMeterCoordinator:
         self._notify()
 
     async def async_apply_import(
-        self, *, reading: float, cost: float, price: float | None
+        self,
+        *,
+        reading: float,
+        volume: float,
+        cost: float,
+        price: float | None,
+        when: datetime,
     ) -> None:
         """
         Align live state with the last values of an imported history.
 
-        Sets the reading and cumulative cost directly (no delta accrual) so the
-        live sensors continue seamlessly from where the import left off.
+        Sets the reading, cumulative volume and cost directly (no delta accrual)
+        so the next live reading smoothly continues from the last imported point.
+        ``when`` is the date of that last point, so a following reading spreads
+        its consumption from there.
         """
         self.reading = reading
+        self.volume = volume
         self.cost = cost
         if price is not None:
             self.price = price
-        self.last_updated = dt_util.utcnow()
+        self.last_updated = when
         self._reminder_notified = False
         persistent_notification.async_dismiss(self.hass, self._notification_id)
         await self._async_save()
